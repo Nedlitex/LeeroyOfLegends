@@ -304,7 +304,7 @@ class dumpThread (threading.Thread):
           call(["./dropbox", "upload", nameLogOld, "log/"])
           call(["rm", nameFinish])
           call(["rm", nameEvict])
-          call(["rm", nameLog])
+          call(["rm", nameLogOld])
           # Dump state
           pendingQueriesList = [pending for pending in pendingQueries.queue]
           dump = {'gameQueue': gameQueue, 'inprocessGames': inprocessGames,
