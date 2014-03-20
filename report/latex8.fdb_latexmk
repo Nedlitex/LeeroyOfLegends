@@ -1,0 +1,25 @@
+# Fdb version 3
+["bibtex latex8"] 1392262763 "latex8.aux" "latex8.bbl" "latex8" 1392275000
+  "./latex8.bst" 1392246867 20659 905972de4c2ed361a9e19361a92cf806 ""
+  "latex8.aux" 1392275000 642 5359846579f3534414664b0469af5894 ""
+  "latex8.bcf" 0 -1 0 ""
+  "latex8.bib" 1392261049 2079 93935d7789ee93fabf0df33348ec1ddd ""
+  (generated)
+  "latex8.blg"
+  "latex8.bbl"
+["pdflatex"] 1392275000 "latex8.tex" "latex8.pdf" "latex8" 1392275000
+  "/usr/local/texlive/2013/texmf-dist/tex/latex/base/article.cls" 1254151887 20571 b8bd218bf2e18b4f5817ee643cd9c515 ""
+  "/usr/local/texlive/2013/texmf-dist/tex/latex/base/size10.clo" 1254151887 9042 248dfba326a1b8733d6bb8e0a3ac1e49 ""
+  "/usr/local/texlive/2013/texmf-dist/tex/latex/psnfss/omsptm.fd" 1137110629 576 95c2c0baea9c719a4be29a3d4122498b ""
+  "/usr/local/texlive/2013/texmf-dist/tex/latex/psnfss/ot1ptm.fd" 1137110629 961 15056f4a61917ceed3a44e4ac11fcc52 ""
+  "/usr/local/texlive/2013/texmf-dist/tex/latex/psnfss/times.sty" 1156702453 857 6c716f26c5eadfb81029fcd6ce2d45e6 ""
+  "/usr/local/texlive/2013/texmf-dist/tex/latex/supertabular/supertabular.sty" 1137110892 14283 563cabe54cdab0459534c65c66672d04 ""
+  "/usr/local/texlive/2013/texmf-dist/tex/latex/tools/longtable.sty" 1254151720 11948 81a7677988a1aa6fe0c169167e78a0d7 ""
+  "latex8.aux" 1392275000 642 5359846579f3534414664b0469af5894 ""
+  "latex8.bbl" 1392262763 956 32911e36b8537f3bafcf826d696a3512 "bibtex latex8"
+  "latex8.sty" 1392246867 4821 b677c7b0074f481f290aa9f93ec8774d ""
+  "latex8.tex" 1392274999 4829 0bb769fac49c13f359ae4a740548584d ""
+  (generated)
+  "latex8.log"
+  "latex8.aux"
+  "latex8.pdf"

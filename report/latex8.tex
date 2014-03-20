@@ -1,0 +1,70 @@
+
+%
+%  $Description: Author guidelines and sample document in LaTeX 2.09$ 
+%
+%  $Author: ienne $
+%  $Date: 1995/09/15 15:20:59 $
+%  $Revision: 1.4 $
+%
+
+\documentclass[times, 10pt,twocolumn]{article} 
+\usepackage{latex8}
+\usepackage{times}
+\usepackage{longtable}
+\usepackage{supertabular}
+
+%\documentstyle[times,art10,twocolumn,latex8]{article}
+
+%------------------------------------------------------------------------- 
+% take the % away on next line to produce the final camera-ready version 
+\pagestyle{empty}
+
+%------------------------------------------------------------------------- 
+\begin{document}
+
+\title{A Machine Learning Approach For E-sports Analysis}
+
+\author{
+	Xiao Bo Zhao \qquad Shen Wang\\
+	Carnegie Mellon University\\
+	\{xiaoboz, shenw\}@andrew.cmu.edu\\
+}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+	In recent years, e-sport has gained its popularity, but the study of it has been lagged behind. Therefore, in this project, we will look deep into the nature of e-sport and create models that can best predict its outcome. We will look at the well studied models targeting the traditional sports and evaluate our approach against the existing models.
+\end{abstract}
+
+
+
+%------------------------------------------------------------------------- 
+\Section{Introduction}
+In the last couple of years, e-sport saw a significant growth, both in terms of players and spectators \cite{Witkowski:2013:ERC:2513002.2513008}. Unlike traditional sports, online matches are formed quickly. Players can find and play against opponents within minutes. As a result, e-sport competitive play occurs very frequently. This fluidity also causes e-sports’ structure to differ significantly from traditional sports. To allow for fast paced match making in games like League of Legends, both teammates and opponents are chosen randomly from a large pool of players of similar ranking. Players on the same team most likely do not have prior collaboration history, while players facing against each other most likely have not studied each other’s strategies. Because of this added complexity, many well-studied models that predict traditional sports’ outcomes might no longer apply to e-sports. Therefore, in this study, we intend to develop a classifier adapted for e-sports’ structure, and in particular, for League of Legend’s competitive gaming model.
+
+\Section{Related Work}
+Given the similarities between e-sports and traditional sports, we believe that it is beneficial to look at some well studied models targeting traditional sports and use them as our baseline. There are many related works of this field~\cite{Joseph2006544}\cite{Min2008551}, and each of them provide unique angles to the problem. For example, {A. Joseph et al.} proposed a model based on Bayesian networks to predict the outcomes of football games. In this model, a Bayesian network is constructed based on the presence of key players, their positions, home-field benefit and a general estimation of the quality of the opposing team. However, we believe that these features do not fit with the nature of League of Legend because this game, and e-sport in general, has a higher degree of freedom than traditional sports. And as a result, we believe the number of features that are relevant to the game outcome should be higher and more importantly, their hidden correlation should be explored.
+
+\Section{Deliverable}
+Our primary goal is to accurately predicate the outcomes of League of Legend competitive games. Therefore, we will deliver a model that can ideally can give us a $60\%$ accuracy and an insight into the inner relationships between the factors of the game. For the best outcome of this project, we also expect the predictor to have higher accuracy for games that are in progress, and even provide coaching depending on the current state of the game. For the worst case, our model should reflect some correlations between the features and the game result, and have an accuracy of at least $55\%$.
+
+\Section{Timeline}
+\begin{supertabular}{|p{5cm}|p{2cm}|}
+    \hline
+    Work To Do & By Date \\ \hline
+    Started data-mining & Feb. 23 \\ \hline
+    Have the train and test set ready and have made progress in the model & Mar. 09 \\ \hline
+    Have solid result above $50\%$ accuracy & Mar. 23 \\ \hline
+    Destroy all equipment used and lost all data collected (oops) & Apr. 1 \\ \hline
+    Miraculously recovered everything and have a solid result above $60\%$ & Apr. 6 \\ \hline
+    Have extended the model to also provide coaching and improve accuracy as much as possible. & Apr. 20 \\ \hline
+    Buffer week, polishing, preparing for demo. & Apr. 27\\
+    \hline
+\end{supertabular}
+
+\bibliographystyle{latex8}
+\bibliography{latex8}
+
+\end{document}
+
