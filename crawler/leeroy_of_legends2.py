@@ -45,7 +45,7 @@ log = Queue.Queue()
 
 def findGameQueueIndex(gameId):
   for i in range(0, len(gameQueue)):
-    if (gameQueue[i][1]['gameId'] == gameId):
+    if (gameQueue[i][1] == gameId):
       return i
   return -1
 
