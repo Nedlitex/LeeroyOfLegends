@@ -284,19 +284,24 @@ class dumpThread (threading.Thread):
       try:
         bigLock.acquire()
         timestamp = time.strftime("%Y-%m-%d-%H")
-        nameFinish = timestamp + "_complete"
-        nameEvict = timestamp + "_notcomplete"
+        timestamp0 = time.strftime("%Y-%m-%d-%H:%M:%S")
         nameLog = timestamp + "_log"
-        nameBackup = timestamp + "_backup"
         # dump log:
         with open(nameLog, mode='a+') as record:
+          record.write("Log time: " + timestamp0 + "\n")
           while (not log.empty()):
             record.write(log.get() + "\n")
         # upload:
         if (timestamp != self.heartbeat):
+          nameFinish = self.heartbeat + "_complete"
+          nameEvict = self.heartbeat + "_notcomplete"
+          nameLogOld = self.heartbeat + "_log"
+          nameBackup = self.heartbeat + "_backup"
+
+          self.heartbeat = timestamp
           call(["./dropbox", "upload", nameFinish, "complete/"])
           call(["./dropbox", "upload", nameEvict, "notcomplete/"])
-          call(["./dropbox", "upload", nameLog, "log/"])
+          call(["./dropbox", "upload", nameLogOld, "log/"])
           call(["rm", nameFinish])
           call(["rm", nameEvict])
           call(["rm", nameLog])
