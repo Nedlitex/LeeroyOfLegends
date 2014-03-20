@@ -280,7 +280,7 @@ class dumpThread (threading.Thread):
 
   def run(self):
     while (True):
-      time.sleep(60)
+      time.sleep(10)
       try:
         bigLock.acquire()
         timestamp = time.strftime("%Y-%m-%d-%H")
