@@ -62,9 +62,9 @@ def resortGameQueue():
   for i in range(0, len(gameQueue)):
     gameId = gameQueue[i][1]
     sortIdxTime = gameQueue[i][0][0]
-    sortIdxCnt = 0
+    sortIdxCnt = 10
     if (gameId in inprocessGames):
-      sortIdxCnt = inprocessGames[gameId]['num']
+      sortIdxCnt = 10 - inprocessGames[gameId]['num']
     gameQueue[i] = ((sortIdxTime, sortIdxCnt), gameId)
   heapq.heapify(gameQueue)
 
@@ -123,7 +123,7 @@ class queryThread (threading.Thread):
               fellowPlayers = game['fellowPlayers']
               if (gameId not in inprocessGames):
                 inprocessGames[gameId] = {'num': 0, 'stats': {}, 'fellowPlayers': fellowPlayers, 'incomplete': False}
-                toInsert = ((-1 * (game['createDate'] / 1800000 * 1800000), 0), gameId)
+                toInsert = ((-1 * (game['createDate'] / 1800000 * 1800000), 10), gameId)
                 heapq.heappush(gameQueue, toInsert)
                 log.put("[Query][TID: " + str(self.tid) + "] New game queued: " +\
                     str(gameId) + ", total queued: " + str(len(gameQueue)))
