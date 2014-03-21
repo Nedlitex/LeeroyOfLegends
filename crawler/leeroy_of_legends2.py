@@ -295,7 +295,7 @@ class processThread (threading.Thread):
     while (True):
       # Wait for games
       log.put("[Process][TID: " + str(self.tid) + "] Wait for next game...")
-      while (len(gameQueue) == 0):
+      while (len(gameQueue) == 0 && (not nextQueryEvent.isSet())):
         time.sleep(5)
         continue
 
