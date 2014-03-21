@@ -13,7 +13,8 @@ shortCD = 10
 longCD = 100
 chanceForOneQuery = 12
 
-gameQueueLimit = 1000
+gameQueueLimit = 300
+pendingQueueLimit = 3000
 
 curl_top = 'https://prod.api.pvp.net/api/lol/na/v1.3/game/by-summoner/'
 curl_bot = '/recent?api_key=a6e35da6-ae68-43ef-86d9-537de33fc2c4'
@@ -67,6 +68,57 @@ def resortGameQueue():
       sortIdxCnt = 10 - inprocessGames[gameId]['num']
     gameQueue[i] = ((sortIdxTime, sortIdxCnt), gameId)
   heapq.heapify(gameQueue)
+
+def evictPendingQueue():
+  numToEvict = pendingQueries.qsize() - pendingQueueLimit
+  pendingQueriesList = []
+  while (not pendingQueries.empty()):
+    pendingQueriesList.append(pendingQueries.get())
+  threshold = 0
+  while (numToEvict > 0):
+    numEvicted = 0
+    for i in range(0, len(pendingQueriesList)):
+      pId = pendingQueriesList[i]
+      numId = 0
+      if (pId in playerGames):
+        numId = len(playerGames[pId])
+      if (numId <= threshold):
+        pendingQueriesList[i] = None
+        numEvicted += 1
+        # Update other stuff
+        if (pId in playerGames):
+          toEvict0 = []
+          playerGame = playerGames[pId]
+          for playerGame0 in playerGame:
+            if (playerGame0 in inprocessGames):
+              if (pId not in inprocessGames[playerGame0]['stats']):
+                inprocessGames[playerGame0]['stats'][nextQuery] = {}
+                inprocessGames[playerGame0]['num'] += 1
+                inprocessGames[playerGame0]['incomplete'] = True
+                log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
+                str(playerGame0) +\
+                " added empty data, now it has: " + str(inprocessGames[playerGame0]['num']))
+              if (inprocessGames[playerGame0]['num'] == 10):
+                toEvict0.append(playerGame0)
+                finishedGames.append(playerGame0)
+                with open(nameEvict, mode='a+') as record:
+                  jsongame = json.dumps(inprocessGames[playerGame0]['stats']) + "\n"
+                  record.write(jsongame)
+                inprocessGames.pop(playerGame0, None)
+                log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
+                str(gameId) +\
+                " gave up, finished game: "+str(len(finishedGames))+", in process games: "\
+                + str(len(inprocessGames)))
+          #end for
+          if (len(toEvict0) > 0):
+            evictOldGames(toEvict0)
+          playerGames.pop(pId, None)
+
+    numToEvict -= numEvicted
+  for q in pendingQueriesList:
+    if (q != None):
+      pendingQueries.put(q)
+
 
 
 class queryThread (threading.Thread):
@@ -261,6 +313,11 @@ class processThread (threading.Thread):
             nextQueryEvent.set()
             log.put("[Process][TID: " + str(self.tid) + "] Add new query: " + str(playerId))
 
+          if (pendingQueries.qsize() - pendingQueueLimit >= 0):
+            evictPendingQueue()
+            if (pendingQueries.empty()):
+              nextQueryEvent.unset()
+
       except KeyboardInterrupt:
           print "Good bye"
           sys.exit()
@@ -279,8 +336,11 @@ class dumpThread (threading.Thread):
     self.heartbeat = time.strftime("%Y-%m-%d-%H")
 
   def run(self):
+    cnt = 0
     while (True):
       time.sleep(10)
+      cnt += 1
+      cnt %= 3
       try:
         bigLock.acquire()
         timestamp = time.strftime("%Y-%m-%d-%H")
@@ -291,20 +351,38 @@ class dumpThread (threading.Thread):
           record.write("Log time: " + timestamp0 + "\n")
           while (not log.empty()):
             record.write(log.get() + "\n")
+        # dump stats:
+        if (cnt == 0):
+          nameStat = timestamp + "_stat"
+          sizePendingQuery = pendingQueries.qsize()
+          sizeFinished = len(finishedGames)
+          sizeInprocess = len(inprocessGames)
+          sizePlayerGameMap = len(playerGames)
+          sizeGameQueue = len(gameQueue)
+          with open(nameStat, mode='a+') as record:
+            record.write("--- System status report @ " + timestamp0 + "---\n")
+            record.write("\t- Finished game count: " + str(sizeFinished) + "\n")
+            record.write("\t- In progress game count: " + str(sizeInprocess) + "\n")
+            record.write("\t- Pending query count: " + str(sizePendingQuery) + "\n")
+            record.write("\t- Pending game count: " + str(sizeGameQueue) + "\n")
+            record.write("\t- Player-game map size: " + str(sizePlayerGameMap) + "\n")
         # upload:
         if (timestamp != self.heartbeat):
           nameFinish = self.heartbeat + "_complete"
           nameEvict = self.heartbeat + "_notcomplete"
           nameLogOld = self.heartbeat + "_log"
+          nameStatOld = self.heartbeat + "_stat"
           nameBackup = self.heartbeat + "_backup"
 
           self.heartbeat = timestamp
           call(["./dropbox", "upload", nameFinish, "complete/"])
           call(["./dropbox", "upload", nameEvict, "notcomplete/"])
           call(["./dropbox", "upload", nameLogOld, "log/"])
+          call(["./dropbox", "upload", nameStatOld, "log/"])
           call(["rm", nameFinish])
           call(["rm", nameEvict])
           call(["rm", nameLogOld])
+          call(["rm", nameStatOld])
           # Dump state
           pendingQueriesList = [pending for pending in pendingQueries.queue]
           dump = {'gameQueue': gameQueue, 'inprocessGames': inprocessGames,
