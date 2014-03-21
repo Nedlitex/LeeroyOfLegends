@@ -76,14 +76,14 @@ def clearPlayerGames():
   for player in playerGames:
     games = playerGames[player]
     if (len(games) == 0):
-      toPop.add(player)
+      toPop.append(player)
     else:
       cnt = 0
       for game in games:
         if (game in inprocessGames):
           cnt += 1
       if (cnt == 0):
-        toPop.add(player)
+        toPop.append(player)
 
   for p in toPop:
     playerGames.pop(p, None)
@@ -126,7 +126,7 @@ def evictPendingQueue():
                 with open(nameEvict, mode='a+') as record:
                   jsongame = json.dumps(inprocessGames[playerGame0]['stats']) + "\n"
                   record.write(jsongame)
-                topop.add(playerGame0)
+                topop.append(playerGame0)
                 log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
                 str(gameId) +\
                 " gave up, finished game: "+str(len(finishedGames))+", in process games: "\
@@ -136,7 +136,7 @@ def evictPendingQueue():
             inprocessGames.pop(tp, None)
           if (len(toEvict0) > 0):
             evictOldGames(toEvict0)
-          pIdTopop.add(pId)
+          pIdTopop.append(pId)
     #end for
     numToEvict -= numEvicted
     for pIdp in pIdTopop:
@@ -231,7 +231,7 @@ class queryThread (threading.Thread):
                 with open(nameOfRecord, mode='a+') as record:
                   jsongame = json.dumps(inprocessGames[gameId]['stats']) + "\n"
                   record.write(jsongame)
-                toPopGames.add(gameId)
+                toPopGames.append(gameId)
                 log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
                 str(gameId) +\
                 " succeeded, finished game: "+str(len(finishedGames))+", in process games: "\
@@ -264,7 +264,7 @@ class queryThread (threading.Thread):
                     with open(nameEvict, mode='a+') as record:
                       jsongame = json.dumps(inprocessGames[playerGame0]['stats']) + "\n"
                       record.write(jsongame)
-                    toPopGames.add(playerGame0)
+                    toPopGames.append(playerGame0)
                     log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
                     str(gameId) +\
                     " gave up, finished game: "+str(len(finishedGames))+", in process games: "\
