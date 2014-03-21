@@ -15,7 +15,6 @@ longCD = 100
 chanceForOneQuery = 12
 
 gameQueueLimit = 300
-pendingQueueLimit = 3000
 
 curl_top = 'https://prod.api.pvp.net/api/lol/na/v1.3/game/by-summoner/'
 curl_bot = '/recent?api_key=a6e35da6-ae68-43ef-86d9-537de33fc2c4'
@@ -56,13 +55,13 @@ def findGameQueueIndex(gameId):
 def evictOldGames (toEvicts):
   offset = 0
   global gameQueueLen
-  for i in range(0, len(gameQueue)):
-    gameId = gameQueue[i][1]
+  l = len(gameQueue)
+  for i in range(0, l):
+    gameId = gameQueue[i-offset][1]
     if (gameId in toEvicts):
+      del gameQueue[i-offset]
       offset += 1
       gameQueueLen -= 1
-    else:
-      gameQueue[i - offset] = gameQueue[i]
   heapq.heapify(gameQueue)
 
 def resortGameQueue():
@@ -79,18 +78,22 @@ def clearPlayerGames():
   toPop = []
   for player in playerGames:
     games = playerGames[player]
+    gameMap = []
     if (len(games) == 0):
       toPop.append(player)
     else:
       cnt = 0
       for game in games:
         if (game in inprocessGames):
+          gameMap.append(game)
           cnt += 1
       if (cnt == 0):
         toPop.append(player)
+      else:
+        playerGames[player] = gameMap
 
   for p in toPop:
-    playerGames.pop(p, None)
+    del playerGames[p]
 
 class queryThread (threading.Thread):
   def __init__(self, tid):
@@ -132,7 +135,6 @@ class queryThread (threading.Thread):
           games = newGame['games']
           # Process result
           existGames = []
-          toPopGames = []
           for game in games:
             gameId = game['gameId']
             existGames.append(gameId)
@@ -154,20 +156,22 @@ class queryThread (threading.Thread):
                 heapq.heappush(gameQueue, toInsert)
                 gameQueueLen += 1
                 log.put("[Query][TID: " + str(self.tid) + "] New game queued: " +\
-                    str(gameId) + ", total queued: " + str(gameQueueLen))
+                    str(gameId) + ", total queued: " + str(gameQueueLen) + ", total inprocess:" + str(len(inprocessGames)))
                 # Update player game map
                 for fellowPlayer in fellowPlayers:
                   fellow = fellowPlayer['summonerId']
                   if (fellow not in playerGames):
                     playerGames[fellow] = []
-                  playerGames[fellow].append(gameId)
+                  if (gameId not in playerGames[fellow]):
+                    playerGames[fellow].append(gameId)
 
               if (nextQuery not in inprocessGames[gameId]['stats']):
                 inprocessGames[gameId]['stats'][nextQuery] = game
                 inprocessGames[gameId]['num'] += 1
                 log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
                 str(gameId) +\
-                " added new data, now it has: " + str(inprocessGames[gameId]['num']))
+                " added new data, now it has: " + str(inprocessGames[gameId]['num']) +\
+                ", total in process: " + str(len(inprocessGames)))
               if (inprocessGames[gameId]['num'] == 10):
                 finishedGames.append(gameId)
                 nameOfRecord = ""
@@ -178,7 +182,7 @@ class queryThread (threading.Thread):
                 with open(nameOfRecord, mode='a+') as record:
                   jsongame = json.dumps(inprocessGames[gameId]['stats']) + "\n"
                   record.write(jsongame)
-                toPopGames.append(gameId)
+                del inprocessGames[gameId]
                 log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
                 str(gameId) +\
                 " succeeded, finished game: "+str(len(finishedGames))+", in process games: "\
@@ -188,13 +192,10 @@ class queryThread (threading.Thread):
                 if (gameQueueId != -1):
                   evictOldGames([gameQueueId])
           #endfor
-          for pg in toPopGames:
-            inprocessGames.pop(pg, None)
           querySucc = True
           toEvict0 = []
           if (nextQuery in playerGames):
             playerGame = playerGames[nextQuery]
-            toPopGames = []
             for playerGame0 in playerGame:
               if (playerGame0 not in existGames):
                 if (playerGame0 in inprocessGames):
@@ -211,38 +212,39 @@ class queryThread (threading.Thread):
                     with open(nameEvict, mode='a+') as record:
                       jsongame = json.dumps(inprocessGames[playerGame0]['stats']) + "\n"
                       record.write(jsongame)
-                    toPopGames.append(playerGame0)
+                    del inprocessGames[playerGame0]
                     log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
                     str(gameId) +\
                     " gave up, finished game: "+str(len(finishedGames))+", in process games: "\
                     + str(len(inprocessGames)))
             #end for
-            for pg in toPopGames:
-              inprocessGames.pop(pg, None)
 
             if (len(toEvict0) > 0):
               evictOldGames(toEvict0)
-            playerGames.pop(nextQuery, None)
+            del playerGames[nextQuery]
           #end if
           # Evict old data
-          if (gameQueueLen >= gameQueueLimit):
-            log.put("[Query][TID: " + str(self.tid) + "] Game queue is full, will evict, current len: " + str(gameQueueLen))
+          if (gameQueueLen > gameQueueLimit):
+            log.put("[Query][TID: " + str(self.tid) + \
+                "] Game queue is full, will evict, current len: " + str(gameQueueLen) +\
+                ", current in process: " + str(len(inprocessGames)))
             numToEvict = gameQueueLen - gameQueueLimit
             toEvicts = heapq.nlargest(numToEvict, gameQueue)
-            toEvicts0 = []
-            toPopGames = []
+            toEvicts1 = []
             with open(nameEvict, mode='a+') as record:
               for toEvict in toEvicts:
                 toEvictGameId = toEvict[1]
-                toEvicts0.append(toEvictGameId)
+                toEvicts1.append(toEvictGameId)
                 if (toEvictGameId in inprocessGames):
-                  toPopGames.append(toEvictGameId)
                   jsongame = json.dumps(inprocessGames[toEvictGameId]['stats']) + "\n"
+                  finishedGames.append(toEvictGameId)
                   record.write(jsongame)
-            evictOldGames(toEvicts0)
-            for pg in toPopGames:
-              inprocessGames.pop(pg, None)
-            log.put("[Query][TID: " + str(self.tid) + "] After evict, current len: " + str(gameQueueLen))
+                  del inprocessGames[toEvictGameId]
+                else:
+                  print "Game: " + str(toEvictGameId) + " cannot be evicted"
+            evictOldGames(toEvicts1)
+            log.put("[Query][TID: " + str(self.tid) + "] After evict, current len: " + str(gameQueueLen) +\
+                ", current in process: " + str(len(inprocessGames)))
           #end if
           resortGameQueue()
           clearPlayerGames()
