@@ -8,6 +8,7 @@ import heapq
 import sys
 import traceback
 from subprocess import call
+import copy
 
 shortCD = 10
 longCD = 100
@@ -31,12 +32,12 @@ noNextQueryEvent.set()
 
 # Minheap for jobs
 gameQueue = []
+gameQueueLen = 0
 playerGames = {}
 
 # Dictionary for finished game
 inprocessGames = {}
 finishedGames = []
-finishedGamesLock = threading.Lock()
 
 # For process thread:
 
@@ -54,11 +55,14 @@ def findGameQueueIndex(gameId):
 
 def evictOldGames (toEvicts):
   offset = 0
+  global gameQueueLen
   for i in range(0, len(gameQueue)):
-    if (i in toEvicts):
+    gameId = gameQueue[i][1]
+    if (gameId in toEvicts):
       offset += 1
+      gameQueueLen -= 1
     else:
-      gameQueue[i-offset] = gameQueue[i]
+      gameQueue[i - offset] = gameQueue[i]
   heapq.heapify(gameQueue)
 
 def resortGameQueue():
@@ -88,71 +92,13 @@ def clearPlayerGames():
   for p in toPop:
     playerGames.pop(p, None)
 
-
-def evictPendingQueue():
-  numToEvict = pendingQueries.qsize() - pendingQueueLimit
-  pendingQueriesList = []
-  while (not pendingQueries.empty()):
-    pendingQueriesList.append(pendingQueries.get())
-  threshold = 0
-  while (numToEvict > 0):
-    numEvicted = 0
-    pIdTopop = []
-    for i in range(0, len(pendingQueriesList)):
-      pId = pendingQueriesList[i]
-      numId = 0
-      if (pId in playerGames):
-        numId = len(playerGames[pId])
-      if (numId <= threshold):
-        pendingQueriesList[i] = None
-        numEvicted += 1
-        # Update other stuff
-        if (pId in playerGames):
-          toEvict0 = []
-          topop = []
-          playerGame = playerGames[pId]
-          for playerGame0 in playerGame:
-            if (playerGame0 in inprocessGames):
-              if (pId not in inprocessGames[playerGame0]['stats']):
-                inprocessGames[playerGame0]['stats'][nextQuery] = {}
-                inprocessGames[playerGame0]['num'] += 1
-                inprocessGames[playerGame0]['incomplete'] = True
-                log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
-                str(playerGame0) +\
-                " added empty data, now it has: " + str(inprocessGames[playerGame0]['num']))
-              if (inprocessGames[playerGame0]['num'] == 10):
-                toEvict0.append(playerGame0)
-                finishedGames.append(playerGame0)
-                with open(nameEvict, mode='a+') as record:
-                  jsongame = json.dumps(inprocessGames[playerGame0]['stats']) + "\n"
-                  record.write(jsongame)
-                topop.append(playerGame0)
-                log.put("[Game][TID: " + str(self.tid) + "] Process game: " +\
-                str(gameId) +\
-                " gave up, finished game: "+str(len(finishedGames))+", in process games: "\
-                + str(len(inprocessGames)))
-          #end for
-          for tp in topop:
-            inprocessGames.pop(tp, None)
-          if (len(toEvict0) > 0):
-            evictOldGames(toEvict0)
-          pIdTopop.append(pId)
-    #end for
-    numToEvict -= numEvicted
-    for pIdp in pIdTopop:
-      playerGames.pop(pIdp, None)
-  for q in pendingQueriesList:
-    if (q != None):
-      pendingQueries.put(q)
-
-
-
 class queryThread (threading.Thread):
   def __init__(self, tid):
     threading.Thread.__init__(self)
     self.tid = tid
 
   def run(self):
+    global gameQueueLen
     while (True):
       # Wait for next query
       log.put( "[Query][TID: " + str(self.tid) + "] Wait for next query...")
@@ -206,8 +152,9 @@ class queryThread (threading.Thread):
                 inprocessGames[gameId] = {'num': 0, 'stats': {}, 'fellowPlayers': fellowPlayers, 'incomplete': False}
                 toInsert = ((-1 * (game['createDate'] / 1800000 * 1800000), 10), gameId)
                 heapq.heappush(gameQueue, toInsert)
+                gameQueueLen += 1
                 log.put("[Query][TID: " + str(self.tid) + "] New game queued: " +\
-                    str(gameId) + ", total queued: " + str(len(gameQueue)))
+                    str(gameId) + ", total queued: " + str(gameQueueLen))
                 # Update player game map
                 for fellowPlayer in fellowPlayers:
                   fellow = fellowPlayer['summonerId']
@@ -278,20 +225,28 @@ class queryThread (threading.Thread):
             playerGames.pop(nextQuery, None)
           #end if
           # Evict old data
-          if (len(gameQueue) >= gameQueueLimit):
-            log.put("[Query][TID: " + str(self.tid) + "] Game queue is full, will evict")
-            numToEvict = len(gameQueue) - gameQueueLimit
+          if (gameQueueLen >= gameQueueLimit):
+            log.put("[Query][TID: " + str(self.tid) + "] Game queue is full, will evict, current len: " + str(gameQueueLen))
+            numToEvict = gameQueueLen - gameQueueLimit
             toEvicts = heapq.nlargest(numToEvict, gameQueue)
+            toEvicts0 = []
+            toPopGames = []
             with open(nameEvict, mode='a+') as record:
               for toEvict in toEvicts:
                 toEvictGameId = toEvict[1]
+                toEvicts0.append(toEvictGameId)
                 if (toEvictGameId in inprocessGames):
+                  toPopGames.append(toEvictGameId)
                   jsongame = json.dumps(inprocessGames[toEvictGameId]['stats']) + "\n"
                   record.write(jsongame)
-            evictOldGames(toEvicts)
+            evictOldGames(toEvicts0)
+            for pg in toPopGames:
+              inprocessGames.pop(pg, None)
+            log.put("[Query][TID: " + str(self.tid) + "] After evict, current len: " + str(gameQueueLen))
           #end if
           resortGameQueue()
           clearPlayerGames()
+
         except urllib2.HTTPError:
           log.put("[Error][TID: " + str(self.tid) +\
             "] Query failed, will sleep and try, chance: " + str(chance))
@@ -328,6 +283,7 @@ class processThread (threading.Thread):
     self.tid = tid
 
   def run(self):
+    global gameQueueLen
     while (True):
       # Wait for games
       log.put("[Process][TID: " + str(self.tid) + "] Wait for next game...")
@@ -340,6 +296,7 @@ class processThread (threading.Thread):
       try:
         bigLock.acquire()
         toProcess0 = heapq.heappop(gameQueue)
+        gameQueueLen -= 1
         toProcessId = toProcess0[1]
         log.put("[Process][TID: " + str(self.tid) + "] Start process game: " + str(toProcessId))
         if ((toProcessId not in finishedGames) and (toProcessId in inprocessGames)):
@@ -351,12 +308,6 @@ class processThread (threading.Thread):
             nextQueryEvent.set()
             noNextQueryEvent.clear()
             log.put("[Process][TID: " + str(self.tid) + "] Add new query: " + str(playerId))
-
-          if (pendingQueries.qsize() - pendingQueueLimit >= 0):
-            evictPendingQueue()
-            if (pendingQueries.empty()):
-              nextQueryEvent.clear()
-              noNextQueryEvent.set()
         else:
           noNextQueryEvent.set()
 
@@ -378,6 +329,7 @@ class dumpThread (threading.Thread):
     self.heartbeat = time.strftime("%Y-%m-%d-%H")
 
   def run(self):
+    global gameQueueLen
     cnt = 0
     while (True):
       time.sleep(10)
@@ -400,13 +352,12 @@ class dumpThread (threading.Thread):
           sizeFinished = len(finishedGames)
           sizeInprocess = len(inprocessGames)
           sizePlayerGameMap = len(playerGames)
-          sizeGameQueue = len(gameQueue)
           with open(nameStat, mode='a+') as record:
             record.write("--- System status report @ " + timestamp0 + "---\n")
             record.write("\t- Finished game count: " + str(sizeFinished) + "\n")
             record.write("\t- In progress game count: " + str(sizeInprocess) + "\n")
             record.write("\t- Pending query count: " + str(sizePendingQuery) + "\n")
-            record.write("\t- Pending game count: " + str(sizeGameQueue) + "\n")
+            record.write("\t- Pending game count: " + str(gameQueueLen) + "\n")
             record.write("\t- Player-game map size: " + str(sizePlayerGameMap) + "\n")
         # upload:
         if (timestamp != self.heartbeat):
@@ -429,7 +380,8 @@ class dumpThread (threading.Thread):
           pendingQueriesList = [pending for pending in pendingQueries.queue]
           dump = {'gameQueue': gameQueue, 'inprocessGames': inprocessGames,
                   'pendingQueries': pendingQueriesList, 'finishedGames': finishedGames,
-                  'playerGames': playerGames, 'hasNextQueryEvent': nextQueryEvent.isSet()}
+                  'playerGames': playerGames, 'hasNextQueryEvent': nextQueryEvent.isSet(),
+                  'gameQueueLen': gameQueueLen}
           jdump = json.dumps(dump)
           with open(nameBackup, mode='a+') as record:
             record.write(jdump + "\n")
