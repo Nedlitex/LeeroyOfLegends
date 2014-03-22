@@ -379,7 +379,7 @@ class dumpThread (threading.Thread):
     threading.Thread.__init__(self)
     self.tid = tid
     now0 = datetime.now()
-    nowMinute0 = (now.minute / 5 * 5)
+    nowMinute0 = (now0.minute / 5 * 5)
     self.heartbeat = time.strftime("%Y-%m-%d-%H") + '-' + str(nowMinute0)
 
   def run(self):
