@@ -409,7 +409,7 @@ class dumpThread (threading.Thread):
           sizeFinished = len(finishedGames)
           sizeInprocess = len(inprocessGames)
           sizePlayerGameMap = len(playerGames)
-          memUsage = str(memory()) / (1024 * 1024)
+          memUsage = str(memory() / (1024 * 1024))
           with open(nameStat, mode='a+') as record:
             record.write("--- System status report @ " + timestamp0 + "---\n")
             record.write("\t- Finished game count: " + str(sizeFinished) + "\n")
