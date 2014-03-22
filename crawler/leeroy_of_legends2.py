@@ -429,36 +429,36 @@ class dumpThread (threading.Thread):
           self.heartbeat = timestamp
           try:
             call(["dropbox", "upload", nameFinish, "complete/"])
+            try:
+              call(["rm", nameFinish])
+            except:
+              print "Failed to remove complete"
           except:
             print "Failed to upload complete"
           try:
             call(["dropbox", "upload", nameEvict, "notcomplete/"])
+            try:
+              call(["rm", nameEvict])
+            except:
+              print "Failed to remove not complete"
           except:
             print "Failed to upload notcomplete"
           try:
             call(["dropbox", "upload", nameLogOld, "log/"])
+            try:
+              call(["rm", nameLogOld])
+            except:
+              print "Failed to remove log"
           except:
             print "Failed to upload log"
           try:
             call(["dropbox", "upload", nameStatOld, "log/"])
+            try:
+              call(["rm", nameStatOld])
+            except:
+              print "Failed to remove stat"
           except:
             print "Failed to upload stat"
-          try:
-            call(["rm", nameFinish])
-          except:
-            print "Failed to remove complete"
-          try:
-            call(["rm", nameEvict])
-          except:
-            print "Failed to remove not complete"
-          try:
-            call(["rm", nameLogOld])
-          except:
-            print "Failed to remove log"
-          try:
-            call(["rm", nameStatOld])
-          except:
-            print "Failed to remove stat"
           # Dump state
           pendingQueriesList = [pending for pending in pendingQueries.queue]
           dump = {'gameQueue': gameQueue, 'inprocessGames': inprocessGames,
@@ -470,12 +470,12 @@ class dumpThread (threading.Thread):
             record.write(jdump + "\n")
           try:
             call(["dropbox", "upload", nameBackup, "backup/"])
+            try:
+              call(["rm", nameBackup])
+            except:
+              print "Failed to remove backup"
           except:
             print "Failed to upload backup"
-          try:
-            call(["rm", nameBackup])
-          except:
-            print "Failed to remove backup"
 
       except:
         e = sys.exc_info()[0]
