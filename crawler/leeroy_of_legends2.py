@@ -10,6 +10,53 @@ import traceback
 from subprocess import call
 import copy
 
+############
+import os
+_proc_status = '/proc/%d/status' % os.getpid()
+
+_scale = {'kB': 1024.0, 'mB': 1024.0*1024.0,
+          'KB': 1024.0, 'MB': 1024.0*1024.0}
+
+def _VmB(VmKey):
+    '''Private.
+    '''
+    global _proc_status, _scale
+     # get pseudo file  /proc/<pid>/status
+    try:
+        t = open(_proc_status)
+        v = t.read()
+        t.close()
+    except:
+        return 0.0  # non-Linux?
+     # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
+    i = v.index(VmKey)
+    v = v[i:].split(None, 3)  # whitespace
+    if len(v) < 3:
+        return 0.0  # invalid format?
+     # convert Vm value to bytes
+    return float(v[1]) * _scale[v[2]]
+
+
+def memory(since=0.0):
+    '''Return memory usage in bytes.
+    '''
+    return _VmB('VmSize:') - since
+
+
+def resident(since=0.0):
+    '''Return resident memory usage in bytes.
+    '''
+    return _VmB('VmRSS:') - since
+
+
+def stacksize(since=0.0):
+    '''Return stack size in bytes.
+    '''
+    return _VmB('VmStk:') - since
+
+
+############
+
 shortCD = 10
 longCD = 100
 chanceForOneQuery = 12
@@ -126,6 +173,9 @@ class queryThread (threading.Thread):
         try:
           bigLock.acquire()
           timestamp = time.strftime("%Y-%m-%d-%H")
+          now = datetime.now()
+          nowMinute = (now.minute / 5 * 5)
+          timestamp += ('-' + str(nowMinute))
           nameFinish = timestamp + "_complete"
           nameEvict = timestamp + "_notcomplete"
           # Query
@@ -328,7 +378,9 @@ class dumpThread (threading.Thread):
   def __init__(self, tid):
     threading.Thread.__init__(self)
     self.tid = tid
-    self.heartbeat = time.strftime("%Y-%m-%d-%H")
+    now0 = datetime.now()
+    nowMinute0 = (now.minute / 5 * 5)
+    self.heartbeat = time.strftime("%Y-%m-%d-%H") + '-' + str(nowMinute0)
 
   def run(self):
     global gameQueueLen
@@ -340,6 +392,9 @@ class dumpThread (threading.Thread):
       try:
         bigLock.acquire()
         timestamp = time.strftime("%Y-%m-%d-%H")
+        now = datetime.now()
+        nowMinute = (now.minute / 5 * 5)
+        timestamp += ('-' + str(nowMinute))
         timestamp0 = time.strftime("%Y-%m-%d-%H:%M:%S")
         nameLog = timestamp + "_log"
         # dump log:
@@ -354,6 +409,7 @@ class dumpThread (threading.Thread):
           sizeFinished = len(finishedGames)
           sizeInprocess = len(inprocessGames)
           sizePlayerGameMap = len(playerGames)
+          memUsage = str(memory()) / (1024 * 1024)
           with open(nameStat, mode='a+') as record:
             record.write("--- System status report @ " + timestamp0 + "---\n")
             record.write("\t- Finished game count: " + str(sizeFinished) + "\n")
@@ -361,6 +417,7 @@ class dumpThread (threading.Thread):
             record.write("\t- Pending query count: " + str(sizePendingQuery) + "\n")
             record.write("\t- Pending game count: " + str(gameQueueLen) + "\n")
             record.write("\t- Player-game map size: " + str(sizePlayerGameMap) + "\n")
+            record.write("\t- Mem usage: " + str(memUsage) + " MB\n")
         # upload:
         if (timestamp != self.heartbeat):
           nameFinish = self.heartbeat + "_complete"
@@ -370,14 +427,38 @@ class dumpThread (threading.Thread):
           nameBackup = self.heartbeat + "_backup"
 
           self.heartbeat = timestamp
-          call(["./dropbox", "upload", nameFinish, "complete/"])
-          call(["./dropbox", "upload", nameEvict, "notcomplete/"])
-          call(["./dropbox", "upload", nameLogOld, "log/"])
-          call(["./dropbox", "upload", nameStatOld, "log/"])
-          call(["rm", nameFinish])
-          call(["rm", nameEvict])
-          call(["rm", nameLogOld])
-          call(["rm", nameStatOld])
+          try:
+            call(["dropbox", "upload", nameFinish, "complete/"])
+          except:
+            print "Failed to upload complete"
+          try:
+            call(["dropbox", "upload", nameEvict, "notcomplete/"])
+          except:
+            print "Failed to upload notcomplete"
+          try:
+            call(["dropbox", "upload", nameLogOld, "log/"])
+          except:
+            print "Failed to upload log"
+          try:
+            call(["dropbox", "upload", nameStatOld, "log/"])
+          except:
+            print "Failed to upload stat"
+          try:
+            call(["rm", nameFinish])
+          except:
+            print "Failed to remove complete"
+          try:
+            call(["rm", nameEvict])
+          except:
+            print "Failed to remove not complete"
+          try:
+            call(["rm", nameLogOld])
+          except:
+            print "Failed to remove log"
+          try:
+            call(["rm", nameStatOld])
+          except:
+            print "Failed to remove stat"
           # Dump state
           pendingQueriesList = [pending for pending in pendingQueries.queue]
           dump = {'gameQueue': gameQueue, 'inprocessGames': inprocessGames,
@@ -387,8 +468,14 @@ class dumpThread (threading.Thread):
           jdump = json.dumps(dump)
           with open(nameBackup, mode='a+') as record:
             record.write(jdump + "\n")
-          call(["./dropbox", "upload", nameBackup, "backup/"])
-          call(["rm", nameBackup])
+          try:
+            call(["dropbox", "upload", nameBackup, "backup/"])
+          except:
+            print "Failed to upload backup"
+          try:
+            call(["rm", nameBackup])
+          except:
+            print "Failed to remove backup"
 
       except:
         e = sys.exc_info()[0]
