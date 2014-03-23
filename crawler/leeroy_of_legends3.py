@@ -294,6 +294,12 @@ while (Alive):
       if (oldQueueHead == -1):
       else:
         if (oldQueueHead == toProcess['id']):
+          nameOfRecord = timestamp + "_incomplete"
+          with open(nameOfRecord, mode='a+') as record:
+            toWrite = {'gameId': gameQueue[0]['id'], 'gameData': gameQueue[0]['data']}
+            jsongame = json.dumps(toWrite) + "\n"
+            record.write(jsongame)
+          incomplete_game_count += 1
           del gameQueue[0]
           toProcess = gameQueue[0]
       oldQueueHead = toProcess['id']
