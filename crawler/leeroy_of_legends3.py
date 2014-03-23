@@ -20,7 +20,7 @@ acceptedGameType = ['MATCHED_GAME']
 gameQueueLimit = 300
 
 def make_game(game):
-  toInsert = {'key'   : (-1 * (game['createDate'] / 1800000 * 1800000), 10),
+  toInsert = {'key'   : (10, -1 * (game['createDate'] / 1800000 * 1800000)),
               'id'    : game['gameId'],
               'data'  : {},
               'fellow' : game['fellowPlayers'],
@@ -80,6 +80,8 @@ complete_game_count = 0
 incomplete_game_count = 0
 evict_game_count = 0
 
+queueHeadEvicted = False
+
 def mark_game_finished (gId):
   global finished_game_count
   hashIdx = gId / max_fingame_perfile
@@ -104,6 +106,7 @@ def is_game_finished (gId):
 def insert_fellow_game (timestamp, game, summoner, incomplete=False):
   global complete_game_count
   global incomplete_game_count
+  global queueHeadEvicted
 
   gameId = game['gameId']
   index = find_game (gameQueue, gameId)
@@ -130,6 +133,8 @@ def insert_fellow_game (timestamp, game, summoner, incomplete=False):
       jsongame = json.dumps(toWrite) + "\n"
       record.write(jsongame)
     delete_index(gameQueue, index)
+    if (index == 0):
+      queueHeadEvicted = True
     log.append("[" + timestamp +"][IO]Game: " +\
         str(gameId) + " after write, game queue len: " + str(len(gameQueue))+\
         ", head of queue: " + str(gameQueue[0]['id']))
@@ -138,6 +143,7 @@ def insert_fellow_game (timestamp, game, summoner, incomplete=False):
   else:
     game = gameQueue[index]
     delete_index(gameQueue, index)
+    game['key'][0] -= 1
     insert_game(gameQueue, game)
 
 def clear_playergame ():
@@ -188,10 +194,12 @@ def evict_game_queue (timestamp):
 Alive = True
 summonerQueue.append(21692722)
 oldSec = time.strftime("%Y-%m-%d-%H:%M:") + str(datetime.now().second / 30 * 30)
+oldQueueHead = -1
 while (Alive):
 
   timestamp = make_timestamp()
   log.append("["+timestamp+"] Start processing pending summoners...")
+  queueHeadEvicted = False
   while (len(summonerQueue) != 0):
     summoner = summonerQueue[0]
     del summonerQueue[0]
@@ -283,6 +291,12 @@ while (Alive):
       Alive = False
     else:
       toProcess = gameQueue[0]
+      if (oldQueueHead == -1):
+      else:
+        if (oldQueueHead == toProcess['id']):
+          del gameQueue[0]
+          toProcess = gameQueue[0]
+      oldQueueHead = toProcess['id']
       log.append("["+timestamp+"] \tPick game: " + str(toProcess['id']))
       if (is_game_finished(toProcess['id'])):
         log.append("["+timestamp+"] \tGame: " + str(toProcess['id']) + " has already finished")
