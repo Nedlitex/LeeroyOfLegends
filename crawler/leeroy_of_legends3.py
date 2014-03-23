@@ -17,7 +17,7 @@ curl_bot = '/recent?api_key=a6e35da6-ae68-43ef-86d9-537de33fc2c4'
 acceptedGameSubtype = ['NORMAL', 'RANKED_SOLO_5x5', 'RANKED_PREMADE_5x5', 'RANKED_TEAM_5x5']
 acceptedGameType = ['MATCHED_GAME']
 
-gameQueueLimit = 300
+gameQueueLimit = 1500
 
 def make_game(game):
   toInsert = {'key'   : (10, -1 * (game['createDate'] / 1800000 * 1800000)),
@@ -143,7 +143,9 @@ def insert_fellow_game (timestamp, game, summoner, incomplete=False):
   else:
     game = gameQueue[index]
     delete_index(gameQueue, index)
-    game['key'][0] -= 1
+    k = game['key']
+    k2 = (k[0] - 1, k[1])
+    game['key'] = k2
     insert_game(gameQueue, game)
 
 def clear_playergame ():
