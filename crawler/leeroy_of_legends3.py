@@ -291,8 +291,7 @@ while (Alive):
       Alive = False
     else:
       toProcess = gameQueue[0]
-      if (oldQueueHead == -1):
-      else:
+      if (oldQueueHead != -1):
         if (oldQueueHead == toProcess['id']):
           nameOfRecord = timestamp + "_incomplete"
           with open(nameOfRecord, mode='a+') as record:
