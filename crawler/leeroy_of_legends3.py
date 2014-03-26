@@ -60,7 +60,7 @@ def is_game_exist (l, gId):
 def make_timestamp ():
   timestamp = time.strftime("%Y-%m-%d-%H")
   now = datetime.now()
-  now_minute = (now.minute / 5 * 5)
+  now_minute = (now.minute / 10 * 10)
   timestamp += ('-' + str(now_minute))
   return timestamp
 
@@ -310,9 +310,7 @@ while (Alive):
           summonerQueue.append(fpId)
   #endif
   # Dump info:
-  newSec = time.strftime("%Y-%m-%d-%H:%M:") + str(datetime.now().second / 30 * 30)
-  if ((not Alive) or (newSec != oldSec)):
-    oldSec = newSec
+  if ((not Alive) or timestamp != old_timestamp):
     nameLog = timestamp + "_log"
     nameStat = timestamp + "_stat"
     with open(nameLog, mode='a+') as record:
@@ -331,12 +329,11 @@ while (Alive):
       record.write("\t- Player-game map size: " + str(len(playerGameMap)) + "\n")
   #endif
   #Upload:
-  if ((not Alive) or timestamp != old_timestamp):
     nameFinish = old_timestamp + "_complete"
     nameEvict = old_timestamp + "_incomplete"
     nameLogOld = old_timestamp + "_log"
     nameStatOld = old_timestamp + "_stat"
-    nameBackup = old_timestamp + "_backup"
+    nameBackup = "backup"
 
     old_timestamp = timestamp
     try:
