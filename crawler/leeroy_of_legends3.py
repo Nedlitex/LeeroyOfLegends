@@ -174,22 +174,18 @@ def evict_game_queue (timestamp):
   if (toEvictLen <= 0):
     return
   nameOfRecord = timestamp + "_incomplete"
-  with open(nameOfRecord, mode='a+') as record:
-    for i in range(0, toEvictLen):
-      toEvictGame = gameQueue[len(gameQueue) - 1]
-      mark_game_finished(toEvictGame['id'])
-      evict_game_count += 1
-      log.append("[" + timestamp +"][IO]Game: " +\
-        str(toEvictGame['id']) + " evicted, will be write to: " + nameOfRecord +\
-        ", before write, game queue len: " + str(len(gameQueue)) +\
-        ", head of queue: " + str(gameQueue[0]['id']))
-      toWrite = {'gameId': toEvictGame['id'], 'gameData': toEvictGame['data']}
-      jsongame = json.dumps(toWrite) + "\n"
-      record.write(jsongame)
-      del gameQueue[len(gameQueue) - 1]
-      log.append("[" + timestamp +"][IO]Game: " +\
-        str(toEvictGame['id']) + " after write, game queue len: " + str(len(gameQueue))+\
-        ", head of queue: " + str(gameQueue[0]['id']))
+  for i in range(0, toEvictLen):
+    toEvictGame = gameQueue[len(gameQueue) - 1]
+    mark_game_finished(toEvictGame['id'])
+    evict_game_count += 1
+    log.append("[" + timestamp +"][IO]Game: " +\
+      str(toEvictGame['id']) + " evicted"+\
+      ", before write, game queue len: " + str(len(gameQueue)) +\
+      ", head of queue: " + str(gameQueue[0]['id']))
+    del gameQueue[len(gameQueue) - 1]
+    log.append("[" + timestamp +"][IO]Game: " +\
+      str(toEvictGame['id']) + " after write, game queue len: " + str(len(gameQueue))+\
+      ", head of queue: " + str(gameQueue[0]['id']))
   clear_playergame()
 
 ################################################################################
@@ -272,7 +268,7 @@ while (Alive):
         time.sleep(1)
         break
       except urllib2.HTTPError:
-          log.put("[Error] Query failed, will sleep and try, chance: " + str(chance))
+          log.append("[Error] Query failed, will sleep and try, chance: " + str(chance))
           time.sleep(10)
       except:
         chance = 0
